@@ -1,3 +1,4 @@
+#!/home/iaw/soft/conda/2024.06.1/envs/pytorch3.9/bin/python
 ############################################################
 ## Author: Iaw
 ## Email: iawhaha@163.com
@@ -28,7 +29,7 @@ from memory_profiler import profile
 import gc
 from pympler import asizeof
 import tracemalloc
-
+import argparse
 #
 # 所得光谱的分辨率dF是由时间长度决定的，根据采样定理，dF>2/T，T是总时间。 由此我们知道，如果要获得更高分辨率的光谱，需要增长模拟时间。 若需要的光谱分辨率为1 cm^-1左右，那么总时间长度必须大于66 ps，再到相关函数计算时大多只能得到总长度一半的有效数据，那么总时间长度还要加倍，需要140 ps。 这样的模拟时间对经典分子动力学来说不算长，但对从头算或第一原理动力学来说不算短。
 # 获得吸收的最高频率是由时间间隔决定的，maxF<1/(2dt)，dt为时间间隔。 一般认为红外光谱的范围为400-4000 cm^-1，因此只要时间间隔小于4 fs即可满足要求。
@@ -49,6 +50,7 @@ def get_V(u, start_frame, end_frame, step, sele_mask, O_charge = False, H_charge
 
         i_v = i_traj.velocities
         seles = u.select_atoms(sele_mask) 
+
         if is_first_frame == False:
             for sele in seles:
                 ow_s[str(sele.resid)] = []
@@ -133,6 +135,8 @@ def V_autocorr_fft(final_array, fraction_autocorrelation_function_to_fft = 0.1):
                            / np.arange(time_len, 0, -1))
         autocorr_z_full = (signal.fftconvolve(dipole_z_shifted, dipole_z[::-1], mode='same')[(-time_len):]
                            / np.arange(time_len, 0, -1))
+
+        # 偶极矩是一个矢量，表示分子或系统的电荷分布特征。在计算偶极矩自相关函数时，我们关心的是偶极矩随时间的变化情况，而不仅仅是某个特定方向的变化。偶极矩的总自相关函数应该反映偶极矩在所有方向上的变化特征。
         autocorr_full = autocorr_x_full + autocorr_y_full + autocorr_z_full
         # Truncate the autocorrelation array
         autocorr = autocorr_full[:int(time_len * fraction_autocorrelation_function_to_fft)]
@@ -157,11 +161,10 @@ def Parm():
     parser.add_argument("-SES",type=str, nargs=1, help="Start:End:Step")
     parser.add_argument("-Oe",type=str, nargs=1, help="")
     parser.add_argument("-He",type=str, nargs=1, help="")
-    parser.add_argument("-frac",type=str, nargs=1, help="fraction_autocorrelation_function_to_fft")
-    parser.add_argument("-out",type=str, nargs=1, help="outf path")
+    parser.add_argument("-frac",type=str, nargs=1, help="fraction_autocorrelation_function_to_fft: defaut = 0.1")
+    parser.add_argument("-outf",type=str, nargs=1, help="outf path")
     parser.add_argument("-seles",type=str, nargs=1, help="[mdanalysis sele]")
 
-    parser.add_argument("-qm",type=str, nargs=1, help="Only output information for the QM area: y or n")
     return parser.parse_args()
 
 
@@ -187,21 +190,22 @@ if __name__ == "__main__":
     fp_traj = myP.ncdf[0]
     dt = eval(myP.dt[0])
 
-    start_frame, end_frame, step = myP.SES[0].split(":")
+    start_frame, end_frame, step = [eval(i) for i in myP.SES[0].split(":")]
     O_charge = eval(myP.Oe[0])
     H_charge = eval(myP.He[0])
-    fraction_autocorrelation_function_to_fft = 0.1
-    v_autocorr_out = "./v_autocorr_mc.csv"
-    sele_mask = "(around 4 ({}) ) and type OW".format("resid 1-898")
+    fraction_autocorrelation_function_to_fft = eval(myP.frac[0])
+    v_autocorr_out = myP.outf[0]
+    sele_mask = myP.seles[0]
+
     u = mda.Universe(fp_top,fp_traj, dt = dt)
-    rprint("All number of frames is {}, and the timestep is {:.4f}ps, and the simulation time is {:.4f}ns".format(len(u.trajectory), u.trajectory.dt, len(u.trajectory) * u.trajectory.dt / 1000))
+    rprint("All number of frames is {}, and the timestep is {:.4f} ps, and the simulation time is {:.4f} ns".format(len(u.trajectory), u.trajectory.dt, len(u.trajectory) * u.trajectory.dt / 1000))
     
     final_array = get_V(u, start_frame, end_frame, step, sele_mask, O_charge, H_charge)
     final_autocorr = V_autocorr_fft(final_array, fraction_autocorrelation_function_to_fft)
 
-    time_step = step * dt                              # ps
+    time_step = step * dt                                        # ps
     final_autocorr_x = np.array(list(range(final_autocorr.shape[0])), dtype=np.float64)
-    final_autocorr_x *= time_step              #ps
+    final_autocorr_x *= time_step                                # ps
 
     # save
     with open(v_autocorr_out, "w+") as F:

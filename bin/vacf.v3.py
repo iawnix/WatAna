@@ -214,7 +214,7 @@ if __name__ == "__main__":
     v_autocorr_out = "./v_autocorr_mc.csv"
     sele_mask = "(around 4 ({}) ) and type OW".format("resid 1-898")
     u = mda.Universe(fp_top,fp_traj, dt = dt)
-    rprint("All number of frames is {}, and the timestep is {:.4f}ps, and the simulation time is {:.4f}ns".format(len(u.trajectory), u.trajectory.dt, len(u.trajectory) * u.trajectory.dt / 1000))
+    rprint("All number of frames is {}, and the timestep is {:.4f} ps, and the simulation time is {:.4f} ns".format(len(u.trajectory), u.trajectory.dt, len(u.trajectory) * u.trajectory.dt / 1000))
     
     final_array = get_V(u, start_frame, end_frame, step, sele_mask, O_charge, H_charge)
     final_autocorr = V_autocorr_fft(final_array, fraction_autocorrelation_function_to_fft)
