@@ -7,3 +7,4 @@
 
 ## Radial distribution function of water
 ![](./example/gr/fig/gr.png)
+(a) RDF (OW-OW); (b) RDF (HW-HW)
