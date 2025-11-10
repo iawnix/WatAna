@@ -2,7 +2,8 @@
 ############################################################
 ## Author: Iaw
 ## Email: iawhaha@163.com
-##Blog: https://iawhome.zicp.fun/
+## Blog: https://iawhome.zicp.fun/
+## 这个版本是不追踪水的
 ############################################################
 
 import MDAnalysis as mda
@@ -35,12 +36,7 @@ import argparse
 # 获得吸收的最高频率是由时间间隔决定的，maxF<1/(2dt)，dt为时间间隔。 一般认为红外光谱的范围为400-4000 cm^-1，因此只要时间间隔小于4 fs即可满足要求。
 # v*q 的自相关函数,详细请引用https://doi.org/10.1063/1.3646306
 
-
-## 这里可以进一步简化运算
-## 只需要读取第一帧与最后一帧做一个差就可以, 不过能用
-## 这个方法不行, 有可能水分子扩散走之后重新回到这个区间
-## 实际上提取的是v*q
-
+# 区别与v5 这里相当于是某一个区域的总偶极
 def get_QV(u, start_frame, end_frame, step, sele_mask, O_charge = False, H_charge = False):
     
     u_ = []
@@ -48,6 +44,7 @@ def get_QV(u, start_frame, end_frame, step, sele_mask, O_charge = False, H_charg
         total_u_ = np.zeros(shape=(3,))
 
         i_v = i_traj.velocities
+        # 这里会重新update sele
         seles = u.select_atoms(sele_mask) 
 
         # 这里是取巧, 水分子储存的时候是按照顺序

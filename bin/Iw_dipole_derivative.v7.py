@@ -4,6 +4,8 @@
 ## Email: iawhaha@163.com
 ## Blog: https://iawhome.zicp.fun/
 ## 这个版本可以追踪水
+## 在v5基础上进行修改，主要想增加hann窗，这里增加在求解总偶
+## 极自行关函数之后，也就是在偶极自相关函数进行fft求解ir前
 ############################################################
 
 import MDAnalysis as mda
@@ -112,6 +114,7 @@ def get_V(u, start_frame, end_frame, step, sele_mask, O_charge = False, H_charge
 # 主要修订这个函数
 # 相较于v4版本，这个地方传入的是所有水分子的加和
 def QV_autocorr_fft(qv_s_total, fraction_autocorrelation_function_to_fft = 0.1):
+
     out_fft = []
 
     # vq_s_total: n_frames,  3
@@ -170,6 +173,8 @@ def Parm():
     parser.add_argument("-frac",type=str, nargs=1, help="fraction_autocorrelation_function_to_fft: defaut = 0.1")
     parser.add_argument("-outf",type=str, nargs=1, help="outf path")
     parser.add_argument("-seles",type=str, nargs=1, help="[mdanalysis sele]")
+    parser.add_argument("-hann",type=bool, nargs=1, help="[hann window]")
+
 
     return parser.parse_args()
 
@@ -202,6 +207,7 @@ if __name__ == "__main__":
     fraction_autocorrelation_function_to_fft = eval(myP.frac[0])
     v_autocorr_out = myP.outf[0]
     sele_mask = myP.seles[0]
+    hann = myP.hann[0]
 
     u = mda.Universe(fp_top,fp_traj, dt = dt)
     rprint("All number of frames is {}, and the timestep is {:.4f} ps, and the simulation time is {:.4f} ns".format(len(u.trajectory), u.trajectory.dt, len(u.trajectory) * u.trajectory.dt / 1000))
@@ -210,13 +216,22 @@ if __name__ == "__main__":
     
     # 求解总偶极
     final_array = final_array0.sum(axis = 1)
-
+    
+    # 求解总偶极的自相关函数
     final_autocorr = QV_autocorr_fft(final_array, fraction_autocorrelation_function_to_fft)
 
     time_step = step * dt                                        # ps
     final_autocorr_x = np.array(list(range(final_autocorr.shape[0])), dtype=np.float64)
     final_autocorr_x *= time_step                                # ps
 
+    if hann:
+        n = np.arange(N:=len(final_autocorr))
+        hann_win = (np.cos(np.pi*n / (N-1))) **2
+        fina_autocorr_hann = hann_win * final_autocorr
+        with open(v_autocorr_out.replace(".csv", "_hann.csv"), "w+") as F:
+            for i, i_x in enumerate(final_autocorr_x):
+                F.writelines("{:.6f}, {:.6f}\n".format(i_x, final_autocorr[i]))
+    
     # save
     with open(v_autocorr_out, "w+") as F:
         for i, i_x in enumerate(final_autocorr_x):
