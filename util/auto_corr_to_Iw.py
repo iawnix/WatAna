@@ -22,6 +22,7 @@ def fft_to_Iw(t: NDArray, y: NDArray, t_unit: str = "ps") -> Tuple[NDArray, NDAr
     N = len(t)
     
     spectrum = fft(y).real[:N//2]
+    #spectrum = (np.abs(fft(y))**2)[:N//2]
     freq = fftfreq(N, d = dt_ps)[:N//2] * 33
 
     return (freq, spectrum)

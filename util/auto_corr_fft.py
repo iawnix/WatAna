@@ -44,6 +44,7 @@ def auto_corr_fft(arr_3d: NDArray, fraction_autocorrelation_function_to_fft: int
     autocorr /= autocorr[0]
 
     return autocorr
+      
 
 if __name__ == "__main__":
     # Test
